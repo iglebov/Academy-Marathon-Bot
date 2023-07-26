@@ -1,0 +1,4 @@
+WELCOME_STRING_INDEX = 0
+SHORT_WELCOME_VIDEO = "https://www.youtube.com/watch?v=Du9NGvGcnEk"
+FIRST_MATCH = 0
+LANGUAGE_CODE = 0

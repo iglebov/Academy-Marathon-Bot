@@ -10,20 +10,33 @@ from telegram.ext import (
     filters,
 )
 
-from eng_replies import eng_keyboard
-from ru_replies import ru_keyboard
-from videos_collector import get_random_podcast_link
+from helpers.consts import FIRST_MATCH, LANGUAGE_CODE, WELCOME_STRING_INDEX
+from helpers.regular_expressions import (
+    RE_LANGUAGE,
+    RE_RANDOM_PODCAST,
+    RE_REPICK_LANGUAGE,
+    RE_STOP,
+    RE_TEAM,
+    RE_WEBPAGE,
+)
+from helpers.texts import language_keyboard, welcome
+from helpers.videos_collector import get_random_podcast_link
+from localization.eng_replies import eng_answer, eng_cancel_answer, eng_keyboard
+from localization.ru_replies import (
+    ru_answer,
+    ru_cancel_answer,
+    ru_keyboard,
+    ru_team_info,
+)
 
 LANGUAGE, ALL = range(2)
+lang = None
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the conversation and asks the user about language preferences."""
-    language_keyboard = [["RUS \U0001F1F7\U0001F1FA"], ["ENG \U0001F1EC\U0001F1E7"]]
-
     await update.message.reply_text(
-        "Привет! Пожалуйста, выбери язык общения со мной: RUS | ENG\n\n"
-        "Hi! Please choose the language of communication with me: RUS | ENG",
+        welcome[WELCOME_STRING_INDEX],
         reply_markup=ReplyKeyboardMarkup(
             language_keyboard,
             resize_keyboard=False,
@@ -35,12 +48,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     return LANGUAGE
 
 
-async def pick_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    lang = context.match[0].split()[0] if context.match else "RUS"
+async def set_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Sets commands for specific language."""
+    global lang
+    lang = context.match[FIRST_MATCH].split()[LANGUAGE_CODE] if context.match else "RUS"
     commands = {"RUS": ru_keyboard, "ENG": eng_keyboard}[lang]
+    answer = {"RUS": ru_answer, "ENG": eng_answer}[lang]
     await update.message.reply_text(
-        "I see! Please send me a photo of yourself, "
-        "so I know what you look like, or send /skip if you don't want to.",
+        answer,
         reply_markup=ReplyKeyboardMarkup(
             commands,
             resize_keyboard=False,
@@ -53,8 +68,7 @@ async def pick_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 
 async def repick_language(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    language_keyboard = [["RUS \U0001F1F7\U0001F1FA"], ["ENG \U0001F1EC\U0001F1E7"]]
-
+    """Writes language options for the user to pick."""
     await update.message.reply_text(
         "Пожалуйста, выбери язык общения со мной: RUS | ENG\n\n"
         "Please choose the language of communication with me: RUS | ENG",
@@ -70,6 +84,7 @@ async def repick_language(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 
 async def get_random_podcast(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Gets random podcast and sends link to the user."""
     podcast = get_random_podcast_link("PLuI-wNAaqFUBIMnOe9eOB-g2MF_Ai6-Zn")
     await update.message.reply_text(
         podcast,
@@ -79,6 +94,7 @@ async def get_random_podcast(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def get_website(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Sends link of the website to the user."""
     await update.message.reply_text(
         "https://academymarathon.ru",
     )
@@ -86,10 +102,20 @@ async def get_website(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     return ALL
 
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def get_team(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Sends info about team to the user."""
+    await update.message.reply_photo(photo=open("academy_marathon_team.png", "rb"))
     await update.message.reply_text(
-        "Bye! I hope we can talk again some day.", reply_markup=ReplyKeyboardRemove()
+        text=ru_team_info, parse_mode="HTML", disable_web_page_preview=True
     )
+
+    return ALL
+
+
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """Stops conversation with the user."""
+    cancel_answer = {"RUS": ru_cancel_answer, "ENG": eng_cancel_answer}[lang]
+    await update.message.reply_text(cancel_answer, reply_markup=ReplyKeyboardRemove())
 
     return ConversationHandler.END
 
@@ -102,43 +128,44 @@ if __name__ == "__main__":
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logger = logging.getLogger(__name__)
 
-    application = ApplicationBuilder().token("TOKEN").build()
+    application = (
+        ApplicationBuilder()
+        .token("6687145336:AAG6HcV8pJXG4pDT3SsjRhRoJZrs5G_6kKE")
+        .build()
+    )
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             LANGUAGE: [
                 MessageHandler(
-                    filters.Regex(
-                        "^(RUS|ENG|RUS \U0001F1F7\U0001F1FA|ENG \U0001F1EC\U0001F1E7)$"
-                    ),
-                    pick_language,
+                    filters.Regex(RE_LANGUAGE),
+                    set_commands,
                 ),
                 MessageHandler(
-                    filters.Regex("^(Stop|stop|Стоп|стоп)$"),
+                    filters.Regex(RE_STOP),
                     cancel,
                 ),
             ],
             ALL: [
                 MessageHandler(
-                    filters.Regex("^(Random podcast|Случайный подкаст)$"),
+                    filters.Regex(RE_RANDOM_PODCAST),
                     get_random_podcast,
                 ),
                 MessageHandler(
-                    filters.Regex(
-                        "^(Webpage|webpage|Сайт|сайт|Веб-сайт \U0001F30F|Webpage \U0001F30F)$$"
-                    ),
+                    filters.Regex(RE_WEBPAGE),
                     get_website,
                 ),
                 MessageHandler(
-                    filters.Regex(
-                        "^(Язык|язык|Language|language|Change language \U0001F1F7\U0001F1FA \U0001F1EC\U0001F1E7|"
-                        + "Сменить язык \U0001F1F7\U0001F1FA \U0001F1EC\U0001F1E7)$$"
-                    ),
+                    filters.Regex(RE_REPICK_LANGUAGE),
                     repick_language,
                 ),
                 MessageHandler(
-                    filters.Regex("^(Stop|stop|Стоп|стоп)$"),
+                    filters.Regex(RE_TEAM),
+                    get_team,
+                ),
+                MessageHandler(
+                    filters.Regex(RE_STOP),
                     cancel,
                 ),
             ],
