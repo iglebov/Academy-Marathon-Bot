@@ -135,7 +135,7 @@ if __name__ == "__main__":
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logger = logging.getLogger(__name__)
 
-    application = ApplicationBuilder().token("Telegram Bot API Token").build()
+    application = ApplicationBuilder().token("Telegram API Bot Token").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -149,6 +149,7 @@ if __name__ == "__main__":
                     filters.Regex(RE_STOP),
                     cancel,
                 ),
+                CommandHandler("start", start),
             ],
             ALL: [
                 MessageHandler(
@@ -171,6 +172,7 @@ if __name__ == "__main__":
                     filters.Regex(RE_STOP),
                     cancel,
                 ),
+                CommandHandler("start", start),
             ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
