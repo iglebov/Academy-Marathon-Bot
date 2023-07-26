@@ -21,7 +21,12 @@ from helpers.regular_expressions import (
 )
 from helpers.texts import language_keyboard, welcome
 from helpers.videos_collector import get_random_podcast_link
-from localization.eng_replies import eng_answer, eng_cancel_answer, eng_keyboard
+from localization.eng_replies import (
+    eng_answer,
+    eng_cancel_answer,
+    eng_keyboard,
+    eng_team_info,
+)
 from localization.ru_replies import (
     ru_answer,
     ru_cancel_answer,
@@ -102,11 +107,13 @@ async def get_website(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     return ALL
 
 
-async def get_team(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def get_team_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Sends info about team to the user."""
+    global lang
+    team_info = {"RUS": ru_team_info, "ENG": eng_team_info}[lang]
     await update.message.reply_photo(photo=open("academy_marathon_team.png", "rb"))
     await update.message.reply_text(
-        text=ru_team_info, parse_mode="HTML", disable_web_page_preview=True
+        text=team_info, parse_mode="HTML", disable_web_page_preview=True
     )
 
     return ALL
@@ -128,11 +135,7 @@ if __name__ == "__main__":
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logger = logging.getLogger(__name__)
 
-    application = (
-        ApplicationBuilder()
-        .token("6687145336:AAG6HcV8pJXG4pDT3SsjRhRoJZrs5G_6kKE")
-        .build()
-    )
+    application = ApplicationBuilder().token("Telegram Bot API Token").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
@@ -162,7 +165,7 @@ if __name__ == "__main__":
                 ),
                 MessageHandler(
                     filters.Regex(RE_TEAM),
-                    get_team,
+                    get_team_info,
                 ),
                 MessageHandler(
                     filters.Regex(RE_STOP),

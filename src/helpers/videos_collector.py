@@ -14,7 +14,7 @@ def get_random_podcast_link(playlist_id: str) -> str:
     youtube = build(
         "youtube",
         "v3",
-        developerKey="AIzaSyAqWXgaPrY_H3CYSqDGEA1LZtqu-iQ0jBI",
+        developerKey="YouTube API Token",
         cache_discovery=False,
     )
 
