@@ -65,7 +65,6 @@ async def set_commands(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
             commands,
             resize_keyboard=False,
             one_time_keyboard=False,
-            input_field_placeholder="RUS or ENG?",
         ),
     )
 
